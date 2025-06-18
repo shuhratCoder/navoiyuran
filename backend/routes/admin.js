@@ -72,4 +72,32 @@ router.post("/adduser", verifyToken, verifyAdmin, async (req, res) => {
     res.status(500).json({ error: "Server xatosi" });
   }
 });
+
+router.put('/users/:id', async (req, res) => {
+  try {
+    const { name, username,email, password, role } = req.body;
+
+    const updatedData = { name, username,email, role };
+    if (password) {
+      // Parolni faqat kiritilgan bo‘lsa yangilash
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updatedData.password = hashedPassword;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+    }
+
+    res.json({ message: 'Foydalanuvchi yangilandi', user: updatedUser });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server xatosi' });
+  }
+});
 module.exports = router;
