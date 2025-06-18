@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Foydalanuvchi Paneli</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background-color: #f4f6f8;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+
+      #fileContainer {
+        max-width: 800px;
+        margin: 30px auto;
+        background: #fff;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      #searchUserInput {
+        width: 50%;
+        padding: 12px;
+        margin-bottom: 20px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .file-item:last-child {
+        border-bottom: none;
+      }
+
+      .file-name {
+        font-size: 16px;
+        color: #333;
+        flex-grow: 1;
+      }
+
+      .actions {
+        display: flex;
+        gap: 15px;
+      }
+
+      .actions a {
+        text-decoration: none;
+        font-size: 18px;
+        color: #007bff;
+        transition: color 0.3s ease;
+      }
+
+      .actions a:hover {
+        color: #0056b3;
+      }
+
+      .error {
+        color: red;
+        text-align: center;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Foydalanuvchi Paneli</h1>
+
+    <div id="fileContainer">
+      <input
+        type="text"
+        id="searchUserInput"
+        placeholder="Fayl nomi bo‘yicha qidiruv..."
+      />
+      <div id="fileList"></div>
+      <p class="error" id="error"></p>
+    </div>
+
+    <script>
+      const token = localStorage.getItem("token");
+      let allFiles = [];
+
+      async function fetchFiles() {
+        try {
+          const response = await fetch("http://localhost:3000/users/files", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (response.status === 401) {
+            alert("Token muddati tugagan. Qayta login qiling.");
+            window.location.href = "login.html";
+            return;
+          }
+          if (!response.ok) throw new Error("Fayllarni olishda xatolik");
+
+          allFiles = await response.json();
+          renderFiles(allFiles);
+        } catch (err) {
+          console.error(err);
+          document.getElementById("error").textContent =
+            "Server bilan bog‘lanishda xatolik yuz berdi";
+        }
+      }
+
+      function renderFiles(fileArray) {
+        const fileList = document.getElementById("fileList");
+        fileList.innerHTML = "";
+
+        if (fileArray.length === 0) {
+          fileList.innerHTML =
+            '<p style="text-align:center;">Fayllar topilmadi</p>';
+          return;
+        }
+
+        fileArray.forEach((file) => {
+          const div = document.createElement("div");
+          div.className = "file-item";
+
+          div.innerHTML = `
+          <span class="file-name">${file}</span>
+          <div class="actions">
+            <a href="http://localhost:3000/users/files/${file}" target="_blank" title="Ko‘rish">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+            <a href="http://localhost:3000/users/files/download/${file}" title="Yuklab olish">
+              <i class="fa-solid fa-download"></i>
+            </a>
+          </div>
+        `;
+
+          fileList.appendChild(div);
+        });
+      }
+
+      document
+        .getElementById("searchUserInput")
+        .addEventListener("input", function () {
+          const query = this.value.toLowerCase();
+          const filtered = allFiles.filter((file) =>
+            file.toLowerCase().includes(query)
+          );
+          renderFiles(filtered);
+        });
+
+      fetchFiles();
+    </script>
+  </body>
+</html>

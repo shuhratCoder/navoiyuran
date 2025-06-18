@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f6f8;
+      }
+      header {
+        background-color: #007bff;
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+      }
+      nav {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        background-color: #ffffff;
+        padding: 15px 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      nav button {
+        background: none;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        color: #007bff;
+      }
+      nav button.active {
+        font-weight: bold;
+        border-bottom: 2px solid #007bff;
+      }
+      section {
+        max-width: 1000px;
+        margin: 30px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        margin-top: 0;
+      }
+      .file-item,
+      .user-item,
+      .role-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid #eee;
+      }
+      .actions i {
+        margin-left: 10px;
+        cursor: pointer;
+        color: #007bff;
+      }
+      .actions i:hover {
+        color: #0056b3;
+      }
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+      input[type="text"] {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        width: 300px;
+      }
+      button.add-btn {
+        padding: 8px 14px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      button.add-btn:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Admin Panel</h1>
+    </header>
+    <nav>
+      <button class="tab-link" data-tab="files">Fayllar</button>
+      <button class="tab-link" data-tab="users">Foydalanuvchilar</button>
+      <button class="tab-link" data-tab="roles">Rollar</button>
+    </nav>
+    <section id="files" class="tab-content">
+      <h2>Fayllar</h2>
+      <div id="fileContainer">
+        <input
+          type="text"
+          id="searchFilesInput"
+          placeholder="Fayl nomi bo‘yicha qidiruv..."
+        />
+        <div id="fileList"></div>
+        <p class="error" id="error"></p>
+      </div>
+      <script>
+        const token = localStorage.getItem("token");
+        let allFiles = [];
+        async function fetchFiles() {
+          try {
+            const response = await fetch("http://localhost:3000/admin/files", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.status === 401) {
+              alert("Token muddati tugagan. Qayta login qiling.");
+              window.location.href = "login.html";
+              return;
+            }
+
+            if (!response.ok) throw new Error("Fayllarni olishda xatolik");
+
+            allFiles = await response.json();
+            renderFiles(allFiles);
+          } catch (err) {
+            console.error(err);
+            document.getElementById("error").textContent =
+              "Server bilan bog‘lanishda xatolik yuz berdi";
+          }
+        }
+        function renderFiles(fileArray) {
+          const fileList = document.getElementById("fileList");
+          fileList.innerHTML = "";
+
+          if (fileArray.length === 0) {
+            fileList.innerHTML =
+              '<p style="text-align:center;">Fayllar topilmadi</p>';
+            return;
+          }
+
+          fileArray.forEach((file) => {
+            const div = document.createElement("div");
+            div.className = "file-item";
+
+            div.innerHTML = `
+          <span class="file-name">${file}</span>
+          <div class="actions">
+            <a href="http://localhost:3000/admin/files/${file}" target="_blank" title="Ko‘rish">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+            <a href="http://localhost:3000/admin/files/download/${file}" title="Yuklab olish">
+              <i class="fa-solid fa-download"></i>
+            </a>
+          </div>
+        `;
+
+            fileList.appendChild(div);
+          });
+        }
+        document
+          .getElementById("searchFilesInput")
+          .addEventListener("input", function () {
+            const query = this.value.toLowerCase();
+            const filtered = allFiles.filter((file) =>
+              file.toLowerCase().includes(query)
+            );
+            renderFiles(filtered);
+          });
+        fetchFiles();
+      </script>
+    </section>
+
+    <!-- Foydalanuvchilar bo‘limi ustun qismi -->
+
+    <section id="users" class="tab-content" style="display: none">
+      <h2>Foydalanuvchilar</h2>
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin: 20px 0;
+        "
+      >
+        <input
+          type="text"
+          id="searchUserInput"
+          placeholder="Qidirish..."
+          style="
+            padding: 10px;
+            width: 250px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+          "
+        />
+        <button
+          onclick="openAddUserModal()"
+          style="
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+          "
+        >
+          <i class="fa fa-user-plus"></i> Foydalanuvchi qo‘shish
+        </button>
+      </div>
+
+      <!-- MODAL FORM (Yashirin holda) -->
+      <div
+        id="addUserModal"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.5);
+          z-index: 999;
+          justify-content: center;
+          align-items: center;
+        "
+      >
+        <div
+          style="
+            background: #fff;
+            padding: 30px 35px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+          "
+        >
+          <h2 style="margin-top: 0; text-align: center">
+            Foydalanuvchi qo‘shish
+          </h2>
+
+          <form id="addUserForm">
+            <div class="form-group">
+              <label>To‘liq ism</label>
+              <input
+                type="text"
+                id="newFullName"
+                placeholder="Masalan: Alisher Qodirov"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Username</label>
+              <input
+                type="text"
+                id="newUsername"
+                placeholder="alisher123"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                id="newEmail"
+                placeholder="example@mail.com"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Parol</label>
+              <input
+                type="password"
+                id="newPassword"
+                placeholder="Yangi parol"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Rolni tanlang</label>
+              <select id="newRole" required>
+                <option value="">-- Tanlang --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <button type="submit">Qo‘shish</button>
+            </div>
+          </form>
+          <p id="addUserMessage"></p>
+          <!-- BUNI HTML ichiga joylang -->
+          <button
+            onclick="closeAddUserModal()"
+            style="
+              position: absolute;
+              top: 10px;
+              right: 15px;
+              background: none;
+              border: none;
+              font-size: 22px;
+              color: #888;
+              cursor: pointer;
+            "
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+      <!-- CSS -->
+      <style>
+        .form-group {
+          margin-bottom: 15px;
+        }
+        .form-group label {
+          display: flex;
+          font-weight: 500;
+          margin-bottom: 6px;
+        }
+        .form-group input,
+        .form-group select {
+          width: 100%;
+          padding: 10px 14px;
+          font-size: 15px;
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          box-sizing: border-box;
+        }
+        .form-group button {
+          width: 100%;
+          padding: 12px;
+          font-size: 16px;
+          background-color: #007bff;
+          border: none;
+          color: #fff;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .form-group button:hover {
+          background-color: #0056b3;
+        }
+        #addUserMessage {
+          text-align: center;
+          font-weight: 500;
+          color: green;
+        }
+      </style>
+
+      <div id="userList"></div>
+      <script>
+        let allUsers = []; // Barcha userlar bu yerda saqlanadi
+
+        // Foydalanuvchilarni olish
+        async function fetchUsers() {
+          const token = localStorage.getItem("token");
+          try {
+            const response = await fetch("http://localhost:3000/admin/users", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            if (response.status === 401) {
+              alert("Token muddati tugagan. Qayta login qiling.");
+              window.location.href = "login.html";
+              return;
+            }
+
+            if (!response.ok)
+              throw new Error("Foydalanuvchilarni olishda xatolik");
+            allUsers = await response.json(); // Saqlab qo‘yamiz
+            displayUsers(allUsers); // Hammasini ko‘rsatamiz
+          } catch (err) {
+            console.error(err);
+          }
+        }
+
+        // Userlarni DOMga chiqarish
+        function displayUsers(users) {
+          const userList = document.getElementById("userList");
+          userList.innerHTML = "";
+
+          users.forEach((user) => {
+            const item = document.createElement("div");
+            item.className = "user-item";
+            item.innerHTML = `
+        <div>
+          <strong>${user.fullName}</strong><br />
+          <small>${user.username} - ${user.email}</small>
+        </div>
+        <div class="actions">
+          <button onclick="editUser('${user._id}')"><i class="fa fa-edit"></i></button>
+          <button onclick="delete0User('${user._id}')"><i class="fa fa-trash"></i></button>
+        </div>
+      `;
+            userList.appendChild(item);
+          });
+        }
+
+        // Real-time filtering
+        document
+          .getElementById("searchUserInput")
+          .addEventListener("input", function (e) {
+            const value = e.target.value.toLowerCase();
+            const filtered = allUsers.filter(
+              (user) =>
+                user.fullName.toLowerCase().includes(value) ||
+                user.username.toLowerCase().includes(value) ||
+                user.email.toLowerCase().includes(value)
+            );
+            displayUsers(filtered);
+          });
+
+        // Sahifa yuklanganda barcha userlarni olib chiqamiz
+        fetchUsers();
+
+        // Modalni ochish va yopish funksiyalari
+        function openAddUserModal() {
+          document.getElementById("addUserModal").style.display = "flex";
+          loadRoleOptions();
+        }
+        function closeAddUserModal() {
+          document.getElementById("addUserModal").style.display = "none";
+        }
+
+        async function loadRoleOptions() {
+          const token = localStorage.getItem("token");
+          try {
+            const res = await fetch("http://localhost:3000/admin/roles", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const roles = await res.json();
+            const select = document.getElementById("newRole");
+            select.innerHTML = '<option value="">-- Rolni tanlang --</option>';
+            roles.forEach((role) => {
+              const opt = document.createElement("option");
+              opt.value = role.name;
+              opt.textContent = role.name;
+              select.appendChild(opt);
+            });
+          } catch (err) {
+            console.error("Fayllarni yuklashda xatolik:", err);
+          }
+        }
+
+        // Foydalanuvchini qo‘shish (API chaqiruvi bilan)
+        document
+          .getElementById("addUserForm")
+          .addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const fullName = document.getElementById("newFullName").value;
+            const username = document.getElementById("newUsername").value;
+            const email = document.getElementById("newEmail").value;
+            const password = document.getElementById("newPassword").value;
+            const role = document.getElementById("newRole").value;
+            const token = localStorage.getItem("token");
+
+            try {
+              const response = await fetch(
+                "http://localhost:3000/admin/adduser",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    fullName,
+                    username,
+                    email,
+                    password,
+                    role,
+                  }),
+                }
+              );
+              if (response.status === 401) {
+                alert("Token muddati tugagan. Qayta login qiling.");
+                window.location.href = "login.html";
+                return;
+              }
+              const data = await response.json();
+              if (response.ok) {
+                document.getElementById("addUserMessage").textContent =
+                  "Foydalanuvchi muvaffaqiyatli qo‘shildi!";
+                document.getElementById("addUserForm").reset();
+                setTimeout(() => {
+                  closeAddUserModal();
+                  location.reload(); // Yangi user ko‘rinishi uchun
+                }, 1500);
+              } else {
+                document.getElementById("addUserMessage").textContent =
+                  data.error || "Xatolik yuz berdi";
+                document.getElementById("addUserMessage").style.color = "red";
+              }
+            } catch (err) {
+              console.error(err);
+              document.getElementById("addUserMessage").textContent =
+                "Server bilan bog‘lanishda xatolik";
+              document.getElementById("addUserMessage").style.color = "red";
+            }
+          });
+      </script>
+    </section>
+
+    <section id="roles" class="tab-content" style="display: none">
+      <h2>Rollar</h2>
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin: 20px 0;
+        "
+      >
+        <input
+          type="text"
+          id="searchRoleInput"
+          placeholder="Qidirish..."
+          style="
+            padding: 10px;
+            width: 250px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+          "
+        />
+
+        <button
+          onclick="openAddRoleModal()"
+          style="
+            padding: 10px 20px;
+            background-color: #0056b3;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+          "
+        >
+          <i class="fa fa-plus"></i> Rol qo‘shish
+        </button>
+      </div>
+
+      <!-- Modal -->
+      <div
+        id="addRoleModal"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.5);
+          z-index: 999;
+          justify-content: center;
+          align-items: center;
+        "
+      >
+        <div
+          style="
+            background: #fff;
+            padding: 30px 35px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+          "
+        >
+          <h2 style="margin-top: 0; text-align: center">Yangi rol qo‘shish</h2>
+          <form id="addRoleForm">
+            <div class="form-group">
+              <label>Rol nomi</label>
+              <input
+                type="text"
+                id="roleNameInput"
+                placeholder="Masalan: auditor, muharrir"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Fayl tanlang</label>
+              <select id="roleFileSelect" required>
+                <option value="">-- Fayl tanlang --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <button type="submit">Qo‘shish</button>
+            </div>
+          </form>
+          <p id="addRoleMessage"></p>
+          <button
+            onclick="closeAddRoleModal()"
+            style="
+              position: absolute;
+              top: 10px;
+              right: 15px;
+              background: none;
+              border: none;
+              font-size: 22px;
+              color: #888;
+              cursor: pointer;
+            "
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+
+      <div id="roleList"></div>
+
+      <style>
+        .role-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          border-bottom: 1px solid #eee;
+        }
+        .role-item .actions button {
+          margin-left: 8px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 16px;
+        }
+        .role-item .actions button:hover {
+          color: #007bff;
+        }
+      </style>
+
+      <script>
+        let allRoles = [];
+
+        async function fetchRoles() {
+          const token = localStorage.getItem("token");
+          try {
+            const response = await fetch("http://localhost:3000/admin/roles", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.status === 401) {
+              alert("Token muddati tugagan. Qayta login qiling.");
+              window.location.href = "login.html";
+              return;
+            }
+            allRoles = await response.json();
+            displayRoles(allRoles);
+          } catch (err) {
+            console.error("Rollarni olishda xatolik:", err);
+          }
+        }
+
+        function displayRoles(roles) {
+          const container = document.getElementById("roleList");
+          container.innerHTML = "";
+          roles.forEach((role) => {
+            const div = document.createElement("div");
+            div.className = "role-item";
+            div.innerHTML = `
+          <div>
+            <strong>${role.name}</strong><br />
+            <small>${role.attachFile}</small>
+          </div>
+          <div class="actions">
+            <button onclick="editRole('${role._id}')"><i class="fa fa-edit"></i></button>
+            <button onclick="deleteRole('${role._id}')"><i class="fa fa-trash"></i></button>
+          </div>
+        `;
+            container.appendChild(div);
+          });
+        }
+
+        function openAddRoleModal() {
+          document.getElementById("addRoleModal").style.display = "flex";
+          loadFileOptions();
+        }
+
+        function closeAddRoleModal() {
+          document.getElementById("addRoleModal").style.display = "none";
+        }
+
+        async function loadFileOptions() {
+          const token = localStorage.getItem("token");
+          try {
+            const res = await fetch("http://localhost:3000/admin/files", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const files = await res.json();
+            const select = document.getElementById("roleFileSelect");
+            select.innerHTML = '<option value="">-- Fayl tanlang --</option>';
+            files.forEach((file) => {
+              const opt = document.createElement("option");
+              opt.value = file;
+              opt.textContent = file;
+              select.appendChild(opt);
+            });
+          } catch (err) {
+            console.error("Fayllarni yuklashda xatolik:", err);
+          }
+        }
+
+        document
+          .getElementById("addRoleForm")
+          .addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const name = document.getElementById("roleNameInput").value;
+            const file = document.getElementById("roleFileSelect").value;
+            const token = localStorage.getItem("token");
+            try {
+              const response = await fetch(
+                "http://localhost:3000/admin/addrole",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ name, file }),
+                }
+              );
+              if (response.status === 401) {
+                alert("Token muddati tugagan. Qayta login qiling.");
+                window.location.href = "login.html";
+                return;
+              }
+              const data = await response.json();
+              console.log(response);
+              console.log(data);
+
+              if (response.ok) {
+                document.getElementById("addRoleMessage").textContent =
+                  "Rol muvaffaqiyatli qo‘shildi!";
+                document.getElementById("addRoleForm").reset();
+                setTimeout(() => {
+                  closeAddRoleModal();
+                  fetchRoles();
+                }, 1500);
+              } else {
+                document.getElementById("addRoleMessage").textContent =
+                  data.error || "Xatolik yuz berdi";
+                document.getElementById("addRoleMessage").style.color = "red";
+              }
+            } catch (err) {
+              console.error(err);
+              document.getElementById("addRoleMessage").textContent =
+                "Server bilan bog‘lanishda xatolik";
+              document.getElementById("addRoleMessage").style.color = "red";
+            }
+          });
+
+        async function deleteRole(id) {
+          if (!confirm("Bu roldan butunlay voz kechmoqchimisiz?")) return;
+          const token = localStorage.getItem("token");
+          try {
+            const res = await fetch(`http://localhost:3000/admin/roles/${id}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              fetchRoles();
+            }
+          } catch (err) {
+            console.error("Rolni o‘chirishda xatolik:", err);
+          }
+        }
+
+        function editRole(id) {
+          alert("Rol tahrirlash funksiyasi hozircha ishlanmagan. ID: " + id);
+        }
+
+        document
+          .getElementById("searchRoleInput")
+          .addEventListener("input", function (e) {
+            const value = e.target.value.toLowerCase();
+            const filtered = allRoles.filter(
+              (role) =>
+                role.name.toLowerCase().includes(value) ||
+                role.file.toLowerCase().includes(value)
+            );
+            displayRoles(filtered);
+          });
+
+        fetchRoles();
+      </script>
+    </section>
+
+    <script>
+      const tabs = document.querySelectorAll(".tab-link");
+      const contents = document.querySelectorAll(".tab-content");
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((t) => t.classList.remove("active"));
+          contents.forEach((c) => {
+            console.log(c);
+            c.style.display = "none";
+          });
+          tab.classList.add("active");
+          document.getElementById(tab.dataset.tab).style.display = "block";
+        });
+      });
+      function showAddUserForm() {
+        alert(
+          "Yangi foydalanuvchi qo‘shish formasi ochiladi (JavaScript bilan ishlanadi)"
+        );
+      }
+      function showAddRoleForm() {
+        alert(
+          "Yangi rol qo‘shish formasi ochiladi (JavaScript bilan ishlanadi)"
+        );
+      }
+    </script>
+    <script src="main.js"></script>
+  </body>
+</html>
