@@ -869,7 +869,7 @@
               <input
                 type="text"
                 id="roleNameInput"
-                placeholder="Masalan: auditor, muharrir"
+                placeholder="Masalan: Aktm,Giolik"
                 required
               />
             </div>
@@ -1244,7 +1244,7 @@
 
             const id = document.getElementById("editRoleId").value;
             const name = document.getElementById("editRoleName").value;
-            const file = document.getElementById("editRoleFile").value;
+            const attachFile = document.getElementById("editRoleFile").value;
             const token = localStorage.getItem("token");
 
             try {
@@ -1256,7 +1256,7 @@
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                   },
-                  body: JSON.stringify({ name, file }),
+                  body: JSON.stringify({ name, attachFile }),
                 }
               );
 

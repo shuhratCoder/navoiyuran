@@ -34,6 +34,36 @@ router.post("/addrole", verifyToken, verifyAdmin, async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+
+router.put("/roles/:id", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { name, attachFile } = req.body;
+    const updatedData = { name, attachFile };
+    const updatedRole = await Role.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      {
+        new: true,
+      }
+    );
+    res.json({ message: "Rol yangilandi", role: updatedRole });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server xatosi" });
+  }
+});
+
+router.delete("/roles/:id", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const deleteRole = await Role.findByIdAndDelete(req.params.id, {
+      new: true,
+    });
+    res.json({ message: "Rol o'chirildi", role: deleteRole });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server xatosi" });
+  }
+});
 // Barcha userlarni olish (faqat admin)
 router.get("/users", verifyToken, verifyAdmin, async (req, res) => {
   try {
@@ -73,11 +103,11 @@ router.post("/adduser", verifyToken, verifyAdmin, async (req, res) => {
   }
 });
 
-router.put("/users/:id", async (req, res) => {
+router.put("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const { name, username, email, password, role } = req.body;
+    const { fullName, username, email, password, role } = req.body;
 
-    const updatedData = { name, username, email, role };
+    const updatedData = { fullName, username, email, role };
     if (password) {
       // Parolni faqat kiritilgan bo‘lsa yangilash
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -100,7 +130,7 @@ router.put("/users/:id", async (req, res) => {
     res.status(500).json({ error: "Server xatosi" });
   }
 });
-router.delete("/users/:id", async (req, res) => {
+router.delete("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
   try {
     const deleteUser = await User.findByIdAndDelete(req.params.id, {
       new: true,
