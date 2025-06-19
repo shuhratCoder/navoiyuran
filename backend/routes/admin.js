@@ -100,7 +100,15 @@ router.put("/users/:id", async (req, res) => {
     res.status(500).json({ error: "Server xatosi" });
   }
 });
-router.delete("/users/:id",async(req ,res)=>{
-  
-})
+router.delete("/users/:id", async (req, res) => {
+  try {
+    const deleteUser = await User.findByIdAndDelete(req.params.id, {
+      new: true,
+    });
+    res.json({ message: "Foydalanuvchi o'chirildi", user: deleteUser });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server xatosi" });
+  }
+});
 module.exports = router;
