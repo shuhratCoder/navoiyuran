@@ -13,7 +13,13 @@ const UserSchema = new mongoose.Schema(
     password: { type: String },
     role: { type: String, default: "user" },
     fullName: { type: String },
-    email: { type: String, sparse: true, lowercase: true, trim: true },
+    email: {
+      type: String,
+      sparse: true,
+      lowercase: true,
+      unique: false,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

@@ -47,7 +47,7 @@ router.get("/users", verifyToken, verifyAdmin, async (req, res) => {
 router.post("/adduser", verifyToken, verifyAdmin, async (req, res) => {
   try {
     //console.log('POST /adduser body:', req.body); // ← debug
-    const { username, password, role, fullName, email } = req.body;
+    var { username, password, role, fullName, email } = req.body;
     if (!username || !password) {
       return res
         .status(400)
@@ -73,11 +73,11 @@ router.post("/adduser", verifyToken, verifyAdmin, async (req, res) => {
   }
 });
 
-router.put('/users/:id', async (req, res) => {
+router.put("/users/:id", async (req, res) => {
   try {
-    const { name, username,email, password, role } = req.body;
+    const { name, username, email, password, role } = req.body;
 
-    const updatedData = { name, username,email, role };
+    const updatedData = { name, username, email, role };
     if (password) {
       // Parolni faqat kiritilgan bo‘lsa yangilash
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -91,13 +91,16 @@ router.put('/users/:id', async (req, res) => {
     );
 
     if (!updatedUser) {
-      return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+      return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
     }
 
-    res.json({ message: 'Foydalanuvchi yangilandi', user: updatedUser });
+    res.json({ message: "Foydalanuvchi yangilandi", user: updatedUser });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server xatosi' });
+    res.status(500).json({ error: "Server xatosi" });
   }
 });
+router.delete("/users/:id",async(req ,res)=>{
+  
+})
 module.exports = router;
